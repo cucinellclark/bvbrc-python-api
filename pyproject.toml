@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bvbrc-solr-python-api"
+version = "0.1.0"
+description = "Python client for BV-BRC Solr API (genome, genome_feature)"
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [{ name = "BV-BRC" }]
+dependencies = [
+  "httpx>=0.28",
+]
+
+[project.urls]
+Homepage = "https://www.bv-brc.org/"
+
+[tool.setuptools]
+packages = ["bvbrc_solr_api"]
+
+
