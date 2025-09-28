@@ -7,7 +7,7 @@ name = "bvbrc-solr-python-api"
 version = "0.1.0"
 description = "Python client for BV-BRC Solr API (genome, genome_feature)"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 authors = [{ name = "BV-BRC" }]
 dependencies = [
   "httpx>=0.28",
