@@ -50,7 +50,6 @@ def _build_body(filter: str, options: Dict[str, Any]) -> str:
 
   return "&".join([p for p in params if p])
 
-
 def run(core_name: str, filter: str, options: Dict[str, Any] | None, base_url: str | None, headers: Dict[str, str] | None):
   options = options or {}
   url = f"{(base_url or DEFAULT_BASE_URL).rstrip('/')}/{core_name}/"
