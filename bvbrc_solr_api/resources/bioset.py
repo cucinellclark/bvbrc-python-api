@@ -5,6 +5,9 @@ from urllib.parse import quote
 
 from ..core.http_client import run
 from ..core.query_builder import qb
+from ..core.solr_query_builder import qb as solrqb
+from ..core.solr_http_client import create_solr_context
+from ..core.cursor import CursorPager
 
 
 class Bioset:
@@ -87,6 +90,46 @@ class Bioset:
 
   def get_all(self, options: Dict[str, Any] | None = None):
     return run("bioset", "", options or {}, self._ctx["base_url"], self._ctx["headers"])
+
+  # Solr cursor-based streaming (Option B implementation)
+  def stream_all_solr(
+    self,
+    *,
+    rows: int = 1000,
+    sort: str | None = None,
+    unique_key: str | None = "bioset_id",
+    fields: list[str] | None = None,
+    q_expr: str | None = None,
+    fq: list[str] | None = None,
+    start_cursor: str = "*",
+    context_overrides: Dict[str, Any] | None = None,
+  ) -> CursorPager:
+    # Combine base context with optional overrides to build Solr context
+    merged_ctx: Dict[str, Any] = {}
+    merged_ctx.update(self._ctx)
+    if context_overrides:
+      merged_ctx.update(context_overrides)
+    solr_ctx = create_solr_context(merged_ctx)
+
+    base_params = solrqb.build_params(
+      q_expr=q_expr or "*:*",
+      fq_list=fq or None,
+      fields=fields or None,
+      # sort, rows, cursorMark handled by CursorPager for iteration
+    )
+
+    return CursorPager(
+      collection="bioset",
+      base_params=base_params,
+      base_url=solr_ctx["solr_base_url"],
+      headers=solr_ctx.get("headers"),
+      auth=solr_ctx.get("auth"),
+      rows=rows,
+      sort=sort,
+      unique_key=unique_key,
+      start_cursor=start_cursor,
+      timeout=solr_ctx.get("timeout", 60.0),
+    )
 
 
 __all__ = ["Bioset"]

@@ -5,7 +5,7 @@ from typing import Any, Dict, Iterable
 import httpx
 
 
-DEFAULT_BASE_URL = "https://www.bv-brc.org/api"
+DEFAULT_BASE_URL = "https://www.bv-brc.org/api-bulk"
 DEFAULT_HEADERS = {
   "Accept": "application/json",
   "Content-Type": "application/rqlquery+x-www-form-urlencoded",
