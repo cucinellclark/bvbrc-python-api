@@ -157,7 +157,7 @@ class SequenceFeature:
       headers=solr_ctx.get("headers"),
       auth=solr_ctx.get("auth"),
       rows=rows,
-      sort=sort,
+      sort=f"{unique_key} asc",
       unique_key=unique_key,
       start_cursor=start_cursor,
       timeout=solr_ctx.get("timeout", 60.0),
