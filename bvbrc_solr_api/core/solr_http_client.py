@@ -39,12 +39,6 @@ def select(collection: str, params: Dict[str, Any], base_url: Optional[str] = No
     params = dict(params)
     params["wt"] = "json"
 
-  print(f"URL: {url}")
-  print(f"Params: {params}")
-  print(f"Headers: {final_headers}")
-  print(f"Auth: {auth}")
-  print(f"Timeout: {timeout}")
-
   with httpx.Client() as client:
     # Use POST with form-urlencoded data in body (like the working curl example)
     response = client.post(url, data=params, headers=final_headers, auth=auth, timeout=timeout)
