@@ -40,7 +40,6 @@ def select(collection: str, params: Dict[str, Any], base_url: Optional[str] = No
     params["wt"] = "json"
 
   with httpx.Client() as client:
-    # Use POST with form-urlencoded data in body (like the working curl example)
     response = client.post(url, data=params, headers=final_headers, auth=auth, timeout=timeout)
     response.raise_for_status()
     return response.json()
