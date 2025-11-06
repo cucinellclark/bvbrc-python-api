@@ -6,7 +6,7 @@ import httpx
 
 
 # Default Solr base URL; should point at the Solr root, not the generic API root
-DEFAULT_SOLR_BASE_URL = "https://www.bv-brc.org/api/"
+DEFAULT_SOLR_BASE_URL = "https://www.bv-brc.org/api-bulk/"
 
 
 def create_solr_context(overrides: Dict[str, Any] | None = None) -> Dict[str, Any]:
@@ -30,7 +30,7 @@ def select(collection: str, params: Dict[str, Any], base_url: Optional[str] = No
   url = f"{solr_base}/{collection}/"
   final_headers = dict(headers or {})
   
-  # Add Solr-specific headers for cursor queries
+  # Add BV-BRC specific headers for Solr queries
   final_headers["Accept"] = "application/solr+json"
   final_headers["Content-Type"] = "application/solrquery+x-www-form-urlencoded"
 
@@ -39,8 +39,15 @@ def select(collection: str, params: Dict[str, Any], base_url: Optional[str] = No
     params = dict(params)
     params["wt"] = "json"
 
+  print(f"URL: {url}")
+  print(f"Params: {params}")
+  print(f"Headers: {final_headers}")
+  print(f"Auth: {auth}")
+  print(f"Timeout: {timeout}")
+
   with httpx.Client() as client:
-    response = client.get(url, params=params, headers=final_headers, auth=auth, timeout=timeout)
+    # Use POST with form-urlencoded data in body (like the working curl example)
+    response = client.post(url, data=params, headers=final_headers, auth=auth, timeout=timeout)
     response.raise_for_status()
     return response.json()
 

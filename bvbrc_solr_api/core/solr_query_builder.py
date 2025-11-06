@@ -25,6 +25,10 @@ def _quote_if_needed(value: Any) -> str:
   if value is None:
     return "\"\""
   text = str(value)
+  # Check if value looks like a numeric ID (e.g., "208964.12")
+  # Don't quote numeric-looking values to match BV-BRC Solr expectations
+  if text.replace('.', '', 1).replace('-', '', 1).isdigit():
+    return text
   return f'"{_escape_term(text)}"'
 
 
