@@ -8,6 +8,7 @@ from .resources.enzyme_class_ref import EnzymeClassRef
 from .resources.epitope import Epitope
 from .resources.epitope_assay import EpitopeAssay
 from .resources.experiment import Experiment
+from .resources.feature_sequence import FeatureSequence
 from .resources.gene_ontology_ref import GeneOntologyRef
 from .resources.genome import Genome
 from .resources.genome_amr import GenomeAmr
@@ -47,6 +48,7 @@ def create_client(context_overrides: dict | None = None):
     epitope=Epitope(ctx),
     epitope_assay=EpitopeAssay(ctx),
     experiment=Experiment(ctx),
+    feature_sequence=FeatureSequence(ctx),
     gene_ontology_ref=GeneOntologyRef(ctx),
     genome=Genome(ctx),
     genome_amr=GenomeAmr(ctx),
@@ -98,6 +100,7 @@ __all__ = [
   "Epitope",
   "EpitopeAssay",
   "Experiment",
+  "FeatureSequence",
   "GeneOntologyRef",
   "Genome",
   "GenomeAmr",
