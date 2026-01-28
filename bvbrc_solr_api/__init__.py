@@ -1,6 +1,15 @@
 from types import SimpleNamespace
 
-from .core.http_client import create_context, run as run_internal
+import httpx
+
+from .core.http_client import create_context, run as run_internal, LIMITS, DEFAULT_TIMEOUT
+from .exceptions import (
+  BVBRCError,
+  BVBRCHTTPError,
+  BVBRCConnectionError,
+  BVBRCTimeoutError,
+  BVBRCQueryError,
+)
 from .resources.antibiotics import Antibiotics
 from .resources.bioset import Bioset
 from .resources.bioset_result import BiosetResult
@@ -37,62 +46,122 @@ from .resources.surveillance import Surveillance
 from .resources.taxonomy import Taxonomy
 
 
-def create_client(context_overrides: dict | None = None):
-  """Factory to create a client with shared context."""
-  ctx = create_context(context_overrides or {})
-  return SimpleNamespace(
-    antibiotics=Antibiotics(ctx),
-    bioset=Bioset(ctx),
-    bioset_result=BiosetResult(ctx),
-    enzyme_class_ref=EnzymeClassRef(ctx),
-    epitope=Epitope(ctx),
-    epitope_assay=EpitopeAssay(ctx),
-    experiment=Experiment(ctx),
-    feature_sequence=FeatureSequence(ctx),
-    gene_ontology_ref=GeneOntologyRef(ctx),
-    genome=Genome(ctx),
-    genome_amr=GenomeAmr(ctx),
-    genome_feature=GenomeFeature(ctx),
-    genome_sequence=GenomeSequence(ctx),
-    id_ref=IdRef(ctx),
-    pathway=Pathway(ctx),
-    pathway_ref=PathwayRef(ctx),
-    ppi=Ppi(ctx),
-    protein_feature=ProteinFeature(ctx),
-    protein_family_ref=ProteinFamilyRef(ctx),
-    protein_structure=ProteinStructure(ctx),
-    sequence_feature=SequenceFeature(ctx),
-    sequence_feature_vt=SequenceFeatureVt(ctx),
-    serology=Serology(ctx),
-    misc_niaid_sgc=MiscNiaidSgc(ctx),
-    spike_lineage=SpikeLineage(ctx),
-    spike_variant=SpikeVariant(ctx),
-    sp_gene=SpGene(ctx),
-    sp_gene_ref=SpGeneRef(ctx),
-    strain=Strain(ctx),
-    structured_assertion=StructuredAssertion(ctx),
-    subsystem=Subsystem(ctx),
-    subsystem_ref=SubsystemRef(ctx),
-    surveillance=Surveillance(ctx),
-    taxonomy=Taxonomy(ctx),
-  )
+class AsyncBVBRCClient:
+  """
+  Async BV-BRC API client with shared connection pooling.
+  
+  Usage:
+    async with create_client() as client:
+      genome = await client.genome.get_by_id("123.456")
+      async for doc in client.genome.stream_all_solr():
+        process(doc)
+  """
+  
+  def __init__(self, context_overrides: dict | None = None):
+    self._ctx = create_context(context_overrides or {})
+    self._http_client: httpx.AsyncClient | None = None
+    
+  async def __aenter__(self):
+    # Create shared AsyncClient with connection pooling
+    self._http_client = httpx.AsyncClient(
+      limits=LIMITS,
+      timeout=self._ctx.get("timeout", DEFAULT_TIMEOUT),
+      follow_redirects=True,
+    )
+    
+    # Initialize all resource classes with context and shared client
+    self.antibiotics = Antibiotics(self._ctx, self._http_client)
+    self.bioset = Bioset(self._ctx, self._http_client)
+    self.bioset_result = BiosetResult(self._ctx, self._http_client)
+    self.enzyme_class_ref = EnzymeClassRef(self._ctx, self._http_client)
+    self.epitope = Epitope(self._ctx, self._http_client)
+    self.epitope_assay = EpitopeAssay(self._ctx, self._http_client)
+    self.experiment = Experiment(self._ctx, self._http_client)
+    self.feature_sequence = FeatureSequence(self._ctx, self._http_client)
+    self.gene_ontology_ref = GeneOntologyRef(self._ctx, self._http_client)
+    self.genome = Genome(self._ctx, self._http_client)
+    self.genome_amr = GenomeAmr(self._ctx, self._http_client)
+    self.genome_feature = GenomeFeature(self._ctx, self._http_client)
+    self.genome_sequence = GenomeSequence(self._ctx, self._http_client)
+    self.id_ref = IdRef(self._ctx, self._http_client)
+    self.pathway = Pathway(self._ctx, self._http_client)
+    self.pathway_ref = PathwayRef(self._ctx, self._http_client)
+    self.ppi = Ppi(self._ctx, self._http_client)
+    self.protein_feature = ProteinFeature(self._ctx, self._http_client)
+    self.protein_family_ref = ProteinFamilyRef(self._ctx, self._http_client)
+    self.protein_structure = ProteinStructure(self._ctx, self._http_client)
+    self.sequence_feature = SequenceFeature(self._ctx, self._http_client)
+    self.sequence_feature_vt = SequenceFeatureVt(self._ctx, self._http_client)
+    self.serology = Serology(self._ctx, self._http_client)
+    self.misc_niaid_sgc = MiscNiaidSgc(self._ctx, self._http_client)
+    self.spike_lineage = SpikeLineage(self._ctx, self._http_client)
+    self.spike_variant = SpikeVariant(self._ctx, self._http_client)
+    self.sp_gene = SpGene(self._ctx, self._http_client)
+    self.sp_gene_ref = SpGeneRef(self._ctx, self._http_client)
+    self.strain = Strain(self._ctx, self._http_client)
+    self.structured_assertion = StructuredAssertion(self._ctx, self._http_client)
+    self.subsystem = Subsystem(self._ctx, self._http_client)
+    self.subsystem_ref = SubsystemRef(self._ctx, self._http_client)
+    self.surveillance = Surveillance(self._ctx, self._http_client)
+    self.taxonomy = Taxonomy(self._ctx, self._http_client)
+    
+    return self
+    
+  async def __aexit__(self, exc_type, exc_val, exc_tb):
+    if self._http_client:
+      await self._http_client.aclose()
+    return False
 
 
-def query(core: str, filter: str = "", options: dict | None = None):
-  """Generic query function against any core.
+def create_client(context_overrides: dict | None = None) -> AsyncBVBRCClient:
+  """
+  Factory to create an async BV-BRC client with shared connection pooling.
+  
+  Usage:
+    async with create_client() as client:
+      result = await client.genome.get_by_id("123.456")
+      
+  Args:
+    context_overrides: Optional dict to override default settings
+      - base_url: API base URL
+      - solr_base_url: Solr base URL
+      - headers: Custom headers
+      - timeout: Request timeout
+      
+  Returns:
+    AsyncBVBRCClient context manager
+  """
+  return AsyncBVBRCClient(context_overrides)
+
+
+async def query(core: str, filter: str = "", options: dict | None = None):
+  """
+  Async generic query function against any core.
 
   Args:
     core: The collection/core name, e.g. "genome".
     filter: RQL filter string (e.g. "eq(genome_id,123.45)").
     options: dict with optional keys: select (list[str]), sort (str), limit (int), http_download (bool).
+    
+  Usage:
+    result = await query("genome", "eq(genome_id,123.45)")
   """
   ctx = create_context({})
-  return run_internal(core, filter, options or {}, ctx["base_url"], ctx["headers"])
+  async with httpx.AsyncClient(limits=LIMITS, timeout=DEFAULT_TIMEOUT) as client:
+    return await run_internal(core, filter, options or {}, client, ctx["base_url"], ctx["headers"])
 
 
 __all__ = [
   "create_client",
   "query",
+  "AsyncBVBRCClient",
+  # Exceptions
+  "BVBRCError",
+  "BVBRCHTTPError",
+  "BVBRCConnectionError",
+  "BVBRCTimeoutError",
+  "BVBRCQueryError",
+  # Resources
   "Antibiotics",
   "Bioset",
   "BiosetResult",
@@ -128,5 +197,3 @@ __all__ = [
   "Surveillance",
   "Taxonomy",
 ]
-
-

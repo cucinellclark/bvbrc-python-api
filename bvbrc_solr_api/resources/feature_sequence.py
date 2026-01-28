@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any, Dict
+import httpx
 from urllib.parse import quote
 
 from ..core.http_client import run
@@ -11,34 +12,35 @@ from ..core.cursor import CursorPager
 
 
 class FeatureSequence:
-  def __init__(self, context: Dict[str, Any]):
+  def __init__(self, context: Dict[str, Any], client: httpx.AsyncClient):
     self._ctx = context
+    self._client = client
 
-  def get_by_id(self, md5: str, options: Dict[str, Any] | None = None):
-    return run("feature_sequence", qb.eq("md5", md5), options or {}, self._ctx["base_url"], self._ctx["headers"])
+  async def get_by_id(self, md5: str, options: Dict[str, Any] | None = None):
+    return await run("feature_sequence", qb.eq("md5", md5), options or {}, self._client, self._ctx["base_url"], self._ctx["headers"])
 
-  def query_by(self, filters: Dict[str, Any] | None = None, options: Dict[str, Any] | None = None):
-    return run("feature_sequence", qb.build_and_from(filters or {}), options or {}, self._ctx["base_url"], self._ctx["headers"])
+  async def query_by(self, filters: Dict[str, Any] | None = None, options: Dict[str, Any] | None = None):
+    return await run("feature_sequence", qb.build_and_from(filters or {}), options or {}, self._client, self._ctx["base_url"], self._ctx["headers"])
 
-  def get_by_md5(self, md5: str, options: Dict[str, Any] | None = None):
-    return run("feature_sequence", qb.eq("md5", md5), options or {}, self._ctx["base_url"], self._ctx["headers"])
+  async def get_by_md5(self, md5: str, options: Dict[str, Any] | None = None):
+    return await run("feature_sequence", qb.eq("md5", md5), options or {}, self._client, self._ctx["base_url"], self._ctx["headers"])
 
-  def get_by_sequence_type(self, sequence_type: str, options: Dict[str, Any] | None = None):
-    return run("feature_sequence", qb.eq("sequence_type", sequence_type), options or {}, self._ctx["base_url"], self._ctx["headers"])
+  async def get_by_sequence_type(self, sequence_type: str, options: Dict[str, Any] | None = None):
+    return await run("feature_sequence", qb.eq("sequence_type", sequence_type), options or {}, self._client, self._ctx["base_url"], self._ctx["headers"])
 
-  def get_by_date_inserted_range(self, start_date: str, end_date: str, options: Dict[str, Any] | None = None):
+  async def get_by_date_inserted_range(self, start_date: str, end_date: str, options: Dict[str, Any] | None = None):
     filters = [qb.gt("date_inserted", start_date), qb.lt("date_inserted", end_date)]
-    return run("feature_sequence", qb.and_(*filters), options or {}, self._ctx["base_url"], self._ctx["headers"])
+    return await run("feature_sequence", qb.and_(*filters), options or {}, self._client, self._ctx["base_url"], self._ctx["headers"])
 
-  def get_by_date_modified_range(self, start_date: str, end_date: str, options: Dict[str, Any] | None = None):
+  async def get_by_date_modified_range(self, start_date: str, end_date: str, options: Dict[str, Any] | None = None):
     filters = [qb.gt("date_modified", start_date), qb.lt("date_modified", end_date)]
-    return run("feature_sequence", qb.and_(*filters), options or {}, self._ctx["base_url"], self._ctx["headers"])
+    return await run("feature_sequence", qb.and_(*filters), options or {}, self._client, self._ctx["base_url"], self._ctx["headers"])
 
-  def search_by_keyword(self, keyword: str, options: Dict[str, Any] | None = None):
-    return run("feature_sequence", f"keyword({quote(keyword)})", options or {}, self._ctx["base_url"], self._ctx["headers"])
+  async def search_by_keyword(self, keyword: str, options: Dict[str, Any] | None = None):
+    return await run("feature_sequence", f"keyword({quote(keyword)})", options or {}, self._client, self._ctx["base_url"], self._ctx["headers"])
 
-  def get_all(self, options: Dict[str, Any] | None = None):
-    return run("feature_sequence", "", options or {}, self._ctx["base_url"], self._ctx["headers"])
+  async def get_all(self, options: Dict[str, Any] | None = None):
+    return await run("feature_sequence", "", options or {}, self._client, self._ctx["base_url"], self._ctx["headers"])
 
   # Solr cursor-based streaming (Option B implementation)
   def stream_all_solr(
@@ -68,6 +70,7 @@ class FeatureSequence:
     )
 
     return CursorPager(
+      client=self._client,
       collection="feature_sequence",
       base_params=base_params,
       base_url=solr_ctx["solr_base_url"],
@@ -77,7 +80,7 @@ class FeatureSequence:
       sort=f"{unique_key} asc",
       unique_key=unique_key,
       start_cursor=start_cursor,
-      timeout=solr_ctx.get("timeout", 60.0),
+      timeout=solr_ctx.get("timeout"),
     )
 
 
