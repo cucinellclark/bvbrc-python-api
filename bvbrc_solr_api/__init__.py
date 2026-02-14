@@ -1,4 +1,4 @@
-from types import SimpleNamespace
+import httpx
 
 from .core.http_client import create_context, run as run_internal
 from .resources.antibiotics import Antibiotics
@@ -37,45 +37,69 @@ from .resources.surveillance import Surveillance
 from .resources.taxonomy import Taxonomy
 
 
+class AsyncBVBRCClient:
+  """
+  Async BV-BRC API client with shared connection pooling.
+
+  Usage:
+    async with create_client() as client:
+      ...
+  """
+
+  def __init__(self, context_overrides: dict | None = None):
+    self._ctx = create_context(context_overrides or {})
+    self._http_client: httpx.AsyncClient | None = None
+
+  async def __aenter__(self):
+    # Shared async client used by async Solr selectors.
+    self._http_client = httpx.AsyncClient(timeout=self._ctx.get("timeout", 60.0))
+
+    # Keep resource objects API-compatible; they still consume context only.
+    self.antibiotics = Antibiotics(self._ctx)
+    self.bioset = Bioset(self._ctx)
+    self.bioset_result = BiosetResult(self._ctx)
+    self.enzyme_class_ref = EnzymeClassRef(self._ctx)
+    self.epitope = Epitope(self._ctx)
+    self.epitope_assay = EpitopeAssay(self._ctx)
+    self.experiment = Experiment(self._ctx)
+    self.feature_sequence = FeatureSequence(self._ctx)
+    self.gene_ontology_ref = GeneOntologyRef(self._ctx)
+    self.genome = Genome(self._ctx)
+    self.genome_amr = GenomeAmr(self._ctx)
+    self.genome_feature = GenomeFeature(self._ctx)
+    self.genome_sequence = GenomeSequence(self._ctx)
+    self.id_ref = IdRef(self._ctx)
+    self.pathway = Pathway(self._ctx)
+    self.pathway_ref = PathwayRef(self._ctx)
+    self.ppi = Ppi(self._ctx)
+    self.protein_feature = ProteinFeature(self._ctx)
+    self.protein_family_ref = ProteinFamilyRef(self._ctx)
+    self.protein_structure = ProteinStructure(self._ctx)
+    self.sequence_feature = SequenceFeature(self._ctx)
+    self.sequence_feature_vt = SequenceFeatureVt(self._ctx)
+    self.serology = Serology(self._ctx)
+    self.misc_niaid_sgc = MiscNiaidSgc(self._ctx)
+    self.spike_lineage = SpikeLineage(self._ctx)
+    self.spike_variant = SpikeVariant(self._ctx)
+    self.sp_gene = SpGene(self._ctx)
+    self.sp_gene_ref = SpGeneRef(self._ctx)
+    self.strain = Strain(self._ctx)
+    self.structured_assertion = StructuredAssertion(self._ctx)
+    self.subsystem = Subsystem(self._ctx)
+    self.subsystem_ref = SubsystemRef(self._ctx)
+    self.surveillance = Surveillance(self._ctx)
+    self.taxonomy = Taxonomy(self._ctx)
+    return self
+
+  async def __aexit__(self, exc_type, exc_val, exc_tb):
+    if self._http_client:
+      await self._http_client.aclose()
+    return False
+
+
 def create_client(context_overrides: dict | None = None):
-  """Factory to create a client with shared context."""
-  ctx = create_context(context_overrides or {})
-  return SimpleNamespace(
-    antibiotics=Antibiotics(ctx),
-    bioset=Bioset(ctx),
-    bioset_result=BiosetResult(ctx),
-    enzyme_class_ref=EnzymeClassRef(ctx),
-    epitope=Epitope(ctx),
-    epitope_assay=EpitopeAssay(ctx),
-    experiment=Experiment(ctx),
-    feature_sequence=FeatureSequence(ctx),
-    gene_ontology_ref=GeneOntologyRef(ctx),
-    genome=Genome(ctx),
-    genome_amr=GenomeAmr(ctx),
-    genome_feature=GenomeFeature(ctx),
-    genome_sequence=GenomeSequence(ctx),
-    id_ref=IdRef(ctx),
-    pathway=Pathway(ctx),
-    pathway_ref=PathwayRef(ctx),
-    ppi=Ppi(ctx),
-    protein_feature=ProteinFeature(ctx),
-    protein_family_ref=ProteinFamilyRef(ctx),
-    protein_structure=ProteinStructure(ctx),
-    sequence_feature=SequenceFeature(ctx),
-    sequence_feature_vt=SequenceFeatureVt(ctx),
-    serology=Serology(ctx),
-    misc_niaid_sgc=MiscNiaidSgc(ctx),
-    spike_lineage=SpikeLineage(ctx),
-    spike_variant=SpikeVariant(ctx),
-    sp_gene=SpGene(ctx),
-    sp_gene_ref=SpGeneRef(ctx),
-    strain=Strain(ctx),
-    structured_assertion=StructuredAssertion(ctx),
-    subsystem=Subsystem(ctx),
-    subsystem_ref=SubsystemRef(ctx),
-    surveillance=Surveillance(ctx),
-    taxonomy=Taxonomy(ctx),
-  )
+  """Factory to create an async client context manager."""
+  return AsyncBVBRCClient(context_overrides)
 
 
 def query(core: str, filter: str = "", options: dict | None = None):
@@ -91,6 +115,7 @@ def query(core: str, filter: str = "", options: dict | None = None):
 
 
 __all__ = [
+  "AsyncBVBRCClient",
   "create_client",
   "query",
   "Antibiotics",
